@@ -447,7 +447,7 @@
 
             const gif = new GIF({
                 workers: 2,
-                quality: 10,
+                quality: 2, // 提高采样质量（从10提升到2），大幅减少颜色量化误差引起的噪点与透明“破洞”
                 width,
                 height,
                 workerScript: state.gifWorkerUrl,
@@ -477,6 +477,7 @@
                 gif.addFrame(ctx, {
                     copy: true,
                     delay: Math.max(Math.round(durationMs), 20),
+                    dispose: 2, // 设置帧处理动作为清除到背景（避免透明背景叠影和像素溢出产生黑点）
                 });
 
                 videoFrame.close();
