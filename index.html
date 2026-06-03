@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="WebP 批量转换工具 - 智能识别静态/动态 WebP，一键转换为 PNG/JPG/GIF 格式">
+    <title>WebP 魔法转换器</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">✨</span>
+                <h1>WebP 魔法转换器</h1>
+            </div>
+            <p class="subtitle">智能识别 · 批量转换 · 一键保存</p>
+        </header>
+
+        <!-- Drop Zone -->
+        <div class="drop-zone" id="dropZone">
+            <div class="drop-zone-content">
+                <div class="drop-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                </div>
+                <p class="drop-text">拖拽 WebP 文件到这里</p>
+                <p class="drop-hint">或点击选择文件</p>
+            </div>
+            <input type="file" id="fileInput" accept=".webp" multiple hidden>
+        </div>
+
+        <!-- Output Directory -->
+        <div class="output-dir-bar" id="outputDirBar">
+            <div class="dir-info">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                </svg>
+                <span class="dir-label">保存位置：</span>
+                <span class="dir-path" id="dirPath">未选择</span>
+            </div>
+            <button class="btn btn-outline btn-sm" id="selectDirBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    <line x1="12" y1="11" x2="12" y2="17"/>
+                    <line x1="9" y1="14" x2="15" y2="14"/>
+                </svg>
+                选择文件夹
+            </button>
+        </div>
+
+        <!-- Settings Bar -->
+        <div class="settings-bar" id="settingsBar" style="display:none;">
+            <div class="setting-item">
+                <svg class="setting-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                    <polyline points="2 17 12 22 22 17"/>
+                    <polyline points="2 12 12 17 22 12"/>
+                </svg>
+                <label for="gifBgSelect" class="setting-label">GIF 背景处理：</label>
+                <select id="gifBgSelect" class="settings-select">
+                    <option value="transparent" selected>透明背景 (适合表情包)</option>
+                    <option value="white">白色背景 (适合浅色背景展示)</option>
+                    <option value="black">黑色背景 (适合深色背景展示)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- File List -->
+        <div class="file-list-section" id="fileListSection" style="display:none;">
+            <div class="section-header">
+                <h2>文件列表</h2>
+                <div class="file-stats">
+                    <span class="stat-badge stat-static" id="staticCount" style="display:none;">
+                        <span class="stat-dot static"></span>
+                        静态 <strong>0</strong>
+                    </span>
+                    <span class="stat-badge stat-animated" id="animatedCount" style="display:none;">
+                        <span class="stat-dot animated"></span>
+                        动态 <strong>0</strong>
+                    </span>
+                </div>
+            </div>
+            <div class="file-list" id="fileList"></div>
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-section" id="progressSection" style="display:none;">
+            <div class="progress-header">
+                <span class="progress-label" id="progressLabel">准备中...</span>
+                <span class="progress-percent" id="progressPercent">0%</span>
+            </div>
+            <div class="progress-track">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="actions" id="actionsBar" style="display:none;">
+            <button class="btn btn-primary" id="convertBtn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                </svg>
+                开始转换
+            </button>
+            <button class="btn btn-ghost" id="clearBtn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+                清空
+            </button>
+        </div>
+
+        <!-- Toast Container -->
+        <div class="toast-container" id="toastContainer"></div>
+    </div>
+
+    <!-- File Card Template -->
+    <template id="fileCardTemplate">
+        <div class="file-card">
+            <div class="file-preview">
+                <img src="" alt="预览" class="preview-img">
+                <span class="type-badge"></span>
+            </div>
+            <div class="file-info">
+                <span class="file-name"></span>
+                <span class="file-size"></span>
+            </div>
+            <div class="file-format">
+                <select class="format-select">
+                    <option value="png">PNG</option>
+                    <option value="jpg">JPG</option>
+                    <option value="gif">GIF</option>
+                </select>
+                <div class="quality-slider" style="display:none;">
+                    <input type="range" min="10" max="100" value="90" class="slider">
+                    <span class="quality-value">90%</span>
+                </div>
+            </div>
+            <div class="file-status">
+                <span class="status-icon status-waiting">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </span>
+                <span class="status-icon status-processing" style="display:none;">
+                    <div class="spinner"></div>
+                </span>
+                <span class="status-icon status-done" style="display:none;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                </span>
+                <span class="status-icon status-error" style="display:none;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                </span>
+            </div>
+        </div>
+    </template>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

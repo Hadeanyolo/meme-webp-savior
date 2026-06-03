@@ -1,2 +1,39 @@
-# meme-webp-savior
-A lightweight browser-based WebP batch converter. Auto-detects static/animated WebP, preserves transparency, and exports to PNG/GIF directly to your local folder.
+# ✨ WebP 魔法转换器 (WebP Magic Converter)
+
+> 🎬 **专为表情包设计的 WebP 批量转换小工具**。智能识别静态/动态 WebP，一键转换为透明背景的 PNG/GIF，支持本地文件夹直接批量保存！
+
+---
+
+## 🌟 核心特色
+
+- 🧠 **智能识别**：自动检测 WebP 文件类型。静态 WebP 默认导出 **PNG**，动态 WebP 默认导出 **GIF**（支持手动覆盖）。
+- 🎨 **透明背景修复**：突破 GIF 格式无 alpha 通道的局限。内置亮绿色度键（Chroma Key）遮罩，导出 GIF 表情包可**完美保留透明背景**，绝无黑色大方块。
+- 📂 **直接保存到文件夹**：利用最新 `File System Access API`，免去打包成 ZIP 压缩包的烦恼，转换后直接批量输出到你指定的任意本地文件夹。
+- 🚀 **纯前端处理**：100% 浏览器本地计算（使用 Chrome `ImageDecoder API` 逐帧提取，`gif.js` 多线程加速合成），**没有任何数据上传服务器**，安全且极速。
+- 📱 **极简启动/在线运行**：不仅支持本地一键双击启动，也非常适合直接挂载在 **GitHub Pages** / **Vercel** 等静态托管平台上作为在线工具使用。
+
+---
+
+## 🛠️ 本地启动与使用步骤
+
+为了安全解锁浏览器的“直接保存到文件夹”功能，本工具需要运行在本地服务器环境（localhost）下：
+
+1. **下载本项目**所有代码文件到本地。
+2. **双击运行** [start.bat](start.bat) 启动脚本。
+3. 脚本会自动启动一个极简的后台本地服务器，并在浏览器中自动打开 `http://localhost:8080`。
+4. 在页面中点击 **“选择文件夹”**，指定转换后的图片保存路径。
+5. **拖入或点击上传** 你的 `.webp` 格式表情包。
+6. 根据需要微调 GIF 的背景处理方式（支持透明、纯白、纯黑），点击 **“开始转换”** 即可！
+7. 使用完毕后，直接关闭黑色命令行窗口即可退出。
+
+---
+
+## 🌐 在线托管（推荐）
+
+本工具已完美适配 `HTTPS` 环境。你可以将 `index.html`、`style.css`、`app.js` 上传至 GitHub Pages，即可免安装、免运行脚本，在任何有网的设备上通过网址直接使用！
+
+---
+
+## 📄 开源协议
+
+本项目采用 [MIT License](LICENSE) 开源协议。
