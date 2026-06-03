@@ -400,10 +400,24 @@
     }
 
     /**
-     * Scan image pixels to find a chroma key color that is furthest from any color present in the image.
+     * Scan image pixels to find if the image has transparency, and if so,
+     * find a chroma key color that is furthest from any color present in the image.
      * This prevents parts of the image that match the chroma key color from becoming transparent (e.g. green grass).
      */
     function findBestChromaKey(imgData) {
+        // First, check if there are any transparent pixels at all
+        let hasTransparency = false;
+        for (let i = 0; i < imgData.length; i += 4) {
+            if (imgData[i+3] < 128) { // standard 50% alpha threshold for checking transparency presence
+                hasTransparency = true;
+                break;
+            }
+        }
+
+        if (!hasTransparency) {
+            return { hasTransparency: false, bgConfig: null };
+        }
+
         const candidates = [
             { name: 'magenta', r: 255, g: 0, b: 255, canvasFill: '#ff00ff', gifTransparent: 0xff00ff },
             { name: 'green', r: 0, g: 255, b: 0, canvasFill: '#00ff00', gifTransparent: 0x00ff00 },
@@ -441,7 +455,7 @@
             }
         }
 
-        return candidates[maxIdx];
+        return { hasTransparency: true, bgConfig: candidates[maxIdx] };
     }
 
     /**
@@ -490,10 +504,14 @@
             // Get background configuration
             const bgMode = dom.gifBgSelect ? dom.gifBgSelect.value : 'transparent';
             let bgConfig;
+            let hasTransparency = false;
+
             if (bgMode === 'transparent') {
-                // Dynamically find the chroma key color furthest from any color present in the image
-                bgConfig = findBestChromaKey(firstFrameData);
+                const analysis = findBestChromaKey(firstFrameData);
+                hasTransparency = analysis.hasTransparency;
+                bgConfig = analysis.bgConfig;
             } else {
+                hasTransparency = true; // For solid color mode, we fill the background
                 bgConfig = BG_COLORS[bgMode] || BG_COLORS.transparent;
             }
 
@@ -508,7 +526,7 @@
                 width,
                 height,
                 workerScript: state.gifWorkerUrl,
-                transparent: bgConfig.gifTransparent,
+                transparent: hasTransparency ? bgConfig.gifTransparent : null, // 如果原图是不透明的，不设置透明色，防止发生颜色误杀
             });
 
             // Decode every frame and add to GIF
@@ -517,14 +535,42 @@
                 const videoFrame = result.image;
 
                 ctx.clearRect(0, 0, width, height);
-                
-                // Draw background color (fills green chroma key for transparent, or solid color if white/black is chosen)
-                if (bgConfig.canvasFill) {
-                    ctx.fillStyle = bgConfig.canvasFill;
-                    ctx.fillRect(0, 0, width, height);
-                }
-                
                 ctx.drawImage(videoFrame, 0, 0);
+
+                // For transparent mode (and only if the original image has transparent pixels),
+                // threshold the alpha channel to force binary transparency.
+                // This prevents semi-transparent pixels (like shadows or anti-aliasing edges) from blending
+                // with the chroma key color and being misclassified as the transparent background color.
+                if (bgMode === 'transparent' && hasTransparency) {
+                    const imgData = ctx.getImageData(0, 0, width, height);
+                    const data = imgData.data;
+                    const threshold = 128; // Standard 50% alpha threshold
+                    for (let j = 0; j < data.length; j += 4) {
+                        const alpha = data[j + 3];
+                        if (alpha < threshold) {
+                            data[j + 3] = 0;
+                        } else {
+                            data[j + 3] = 255;
+                        }
+                    }
+                    ctx.putImageData(imgData, 0, 0);
+
+                    // Draw the chroma key background behind the thresholded image
+                    if (bgConfig && bgConfig.canvasFill) {
+                        ctx.globalCompositeOperation = 'destination-over';
+                        ctx.fillStyle = bgConfig.canvasFill;
+                        ctx.fillRect(0, 0, width, height);
+                        ctx.globalCompositeOperation = 'source-over'; // restore default
+                    }
+                } else if (bgMode !== 'transparent') {
+                    // For solid color modes (white/black), draw the background color behind the image
+                    if (bgConfig && bgConfig.canvasFill) {
+                        ctx.globalCompositeOperation = 'destination-over';
+                        ctx.fillStyle = bgConfig.canvasFill;
+                        ctx.fillRect(0, 0, width, height);
+                        ctx.globalCompositeOperation = 'source-over';
+                    }
+                }
 
                 // VideoFrame.duration is in microseconds; convert to ms
                 const durationMs = videoFrame.duration
