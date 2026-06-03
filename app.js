@@ -400,6 +400,51 @@
     }
 
     /**
+     * Scan image pixels to find a chroma key color that is furthest from any color present in the image.
+     * This prevents parts of the image that match the chroma key color from becoming transparent (e.g. green grass).
+     */
+    function findBestChromaKey(imgData) {
+        const candidates = [
+            { name: 'magenta', r: 255, g: 0, b: 255, canvasFill: '#ff00ff', gifTransparent: 0xff00ff },
+            { name: 'green', r: 0, g: 255, b: 0, canvasFill: '#00ff00', gifTransparent: 0x00ff00 },
+            { name: 'cyan', r: 0, g: 255, b: 255, canvasFill: '#00ffff', gifTransparent: 0x00ffff },
+            { name: 'yellow', r: 255, g: 255, b: 0, canvasFill: '#ffff00', gifTransparent: 0xffff00 },
+            { name: 'blue', r: 0, g: 0, b: 255, canvasFill: '#0000ff', gifTransparent: 0x0000ff },
+            { name: 'red', r: 255, g: 0, b: 0, canvasFill: '#ff0000', gifTransparent: 0xff0000 }
+        ];
+
+        const minDists = candidates.map(() => Infinity);
+
+        for (let i = 0; i < imgData.length; i += 4) {
+            const r = imgData[i];
+            const g = imgData[i+1];
+            const b = imgData[i+2];
+            const a = imgData[i+3];
+
+            // Only consider opaque or mostly opaque pixels
+            if (a < 30) continue;
+
+            for (let j = 0; j < candidates.length; j++) {
+                const c = candidates[j];
+                const distSq = (r - c.r) ** 2 + (g - c.g) ** 2 + (b - c.b) ** 2;
+                if (distSq < minDists[j]) {
+                    minDists[j] = distSq;
+                }
+            }
+        }
+
+        // Find the candidate with the maximum minimum distance
+        let maxIdx = 0;
+        for (let j = 1; j < minDists.length; j++) {
+            if (minDists[j] > minDists[maxIdx]) {
+                maxIdx = j;
+            }
+        }
+
+        return candidates[maxIdx];
+    }
+
+    /**
      * Use the browser's native ImageDecoder API to decode animated WebP
      * frame-by-frame, then re-encode as GIF via gif.js.
      */
@@ -423,22 +468,34 @@
                 throw new Error('No frames found in animated WebP');
             }
 
-            // Decode first frame to get canvas dimensions
+            // Decode first frame to get canvas dimensions and analyze colors
             const firstResult = await decoder.decode({ frameIndex: 0 });
             const width = firstResult.image.displayWidth;
             const height = firstResult.image.displayHeight;
-            firstResult.image.close();
+            const firstVideoFrame = firstResult.image;
 
-            // Get background configuration
-            const bgMode = dom.gifBgSelect ? dom.gifBgSelect.value : 'transparent';
-            const bgConfig = BG_COLORS[bgMode] || BG_COLORS.transparent;
-
-            // Set up canvas for frame capture
+            // Set up canvas for frame capture and color analysis
             const canvas = document.createElement('canvas');
             canvas.width = width;
             canvas.height = height;
             // Set willReadFrequently to true to fix console warning
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+            // Draw first frame to analyze pixels
+            ctx.clearRect(0, 0, width, height);
+            ctx.drawImage(firstVideoFrame, 0, 0);
+            const firstFrameData = ctx.getImageData(0, 0, width, height).data;
+            firstVideoFrame.close();
+
+            // Get background configuration
+            const bgMode = dom.gifBgSelect ? dom.gifBgSelect.value : 'transparent';
+            let bgConfig;
+            if (bgMode === 'transparent') {
+                // Dynamically find the chroma key color furthest from any color present in the image
+                bgConfig = findBestChromaKey(firstFrameData);
+            } else {
+                bgConfig = BG_COLORS[bgMode] || BG_COLORS.transparent;
+            }
 
             if (!state.gifWorkerUrl) {
                 decoder.close();
